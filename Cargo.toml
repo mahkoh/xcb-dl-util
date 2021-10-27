@@ -1,0 +1,75 @@
+[package]
+name = "xcb-dl-util"
+version = "0.1.0"
+edition = "2021"
+license = "X11"
+
+[dependencies]
+xcb-dl = "0.1.1"
+bitflags = "1.3.2"
+libc = "0.2.105"
+log = "0.4.14"
+bstr = { version = "0.2.17", default-features = false }
+thiserror = "1.0.30"
+
+[dev-dependencies]
+simple_logger = "1.13.0"
+
+[features]
+has_symbol = ["xcb-dl/has_symbol"]
+
+xcb_composite = ["xcb_composite_types", "xcb-dl/xcb_composite"]
+xcb_damage = ["xcb_damage_types", "xcb-dl/xcb_damage"]
+xcb_dpms = ["xcb_dpms_types", "xcb-dl/xcb_dpms"]
+xcb_dri2 = ["xcb_dri2_types", "xcb-dl/xcb_dri2"]
+xcb_dri3 = ["xcb_dri3_types", "xcb-dl/xcb_dri3"]
+xcb_ge = ["xcb_ge_types", "xcb-dl/xcb_ge"]
+xcb_glx = ["xcb_glx_types", "xcb-dl/xcb_glx"]
+xcb_present = ["xcb_present_types", "xcb-dl/xcb_present"]
+xcb_randr = ["xcb_randr_types", "xcb-dl/xcb_randr"]
+xcb_record = ["xcb_record_types", "xcb-dl/xcb_record"]
+xcb_render = ["xcb_render_types", "xcb-dl/xcb_render"]
+xcb_res = ["xcb_res_types", "xcb-dl/xcb_res"]
+xcb_screensaver = ["xcb_screensaver_types", "xcb-dl/xcb_screensaver"]
+xcb_shape = ["xcb_shape_types", "xcb-dl/xcb_shape"]
+xcb_shm = ["xcb_shm_types", "xcb-dl/xcb_shm"]
+xcb_sync = ["xcb_sync_types", "xcb-dl/xcb_sync"]
+xcb_xevie = ["xcb_xevie_types", "xcb-dl/xcb_xevie"]
+xcb_xf86dri = ["xcb_xf86dri_types", "xcb-dl/xcb_xf86dri"]
+xcb_xfixes = ["xcb_xfixes_types", "xcb-dl/xcb_xfixes"]
+xcb_xinerama = ["xcb_xinerama_types", "xcb-dl/xcb_xinerama"]
+xcb_xinput = ["xcb_xinput_types", "xcb-dl/xcb_xinput"]
+xcb_xkb = ["xcb_xkb_types", "xcb-dl/xcb_xkb"]
+xcb_xprint = ["xcb_xprint_types", "xcb-dl/xcb_xprint"]
+xcb_xselinux = ["xcb_xselinux_types", "xcb-dl/xcb_xselinux"]
+xcb_xtest = ["xcb_xtest_types", "xcb-dl/xcb_xtest"]
+xcb_xv = ["xcb_xv_types", "xcb-dl/xcb_xv"]
+xcb_xvmc = ["xcb_xvmc_types", "xcb-dl/xcb_xvmc"]
+
+xcb_composite_types = ["xcb-dl/xcb_composite_types"]
+xcb_damage_types = ["xcb-dl/xcb_damage_types"]
+xcb_dpms_types = ["xcb-dl/xcb_dpms_types"]
+xcb_dri2_types = ["xcb-dl/xcb_dri2_types"]
+xcb_dri3_types = ["xcb-dl/xcb_dri3_types"]
+xcb_ge_types = ["xcb-dl/xcb_ge_types"]
+xcb_glx_types = ["xcb-dl/xcb_glx_types"]
+xcb_present_types = ["xcb-dl/xcb_present_types"]
+xcb_randr_types = ["xcb-dl/xcb_randr_types"]
+xcb_record_types = ["xcb-dl/xcb_record_types"]
+xcb_render_types = ["xcb-dl/xcb_render_types"]
+xcb_res_types = ["xcb-dl/xcb_res_types"]
+xcb_screensaver_types = ["xcb-dl/xcb_screensaver_types"]
+xcb_shape_types = ["xcb-dl/xcb_shape_types"]
+xcb_shm_types = ["xcb-dl/xcb_shm_types"]
+xcb_sync_types = ["xcb-dl/xcb_sync_types"]
+xcb_xevie_types = ["xcb-dl/xcb_xevie_types"]
+xcb_xf86dri_types = ["xcb-dl/xcb_xf86dri_types"]
+xcb_xfixes_types = ["xcb-dl/xcb_xfixes_types"]
+xcb_xinerama_types = ["xcb-dl/xcb_xinerama_types"]
+xcb_xinput_types = ["xcb-dl/xcb_xinput_types"]
+xcb_xkb_types = ["xcb-dl/xcb_xkb_types"]
+xcb_xprint_types = ["xcb-dl/xcb_xprint_types"]
+xcb_xselinux_types = ["xcb-dl/xcb_xselinux_types"]
+xcb_xtest_types = ["xcb-dl/xcb_xtest_types"]
+xcb_xv_types = ["xcb-dl/xcb_xv_types"]
+xcb_xvmc_types = ["xcb-dl/xcb_xvmc_types"]
