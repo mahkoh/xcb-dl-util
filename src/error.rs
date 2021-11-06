@@ -1,18 +1,22 @@
 #![allow(non_camel_case_types)]
 
+use crate::xcb_box::XcbBox;
+use bstr::ByteSlice;
+use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::{Debug, Display, Formatter};
+use std::os::raw::c_int;
+use std::{ptr, slice};
+use thiserror::Error;
 use xcb_dl::ffi::*;
 use xcb_dl::Xcb;
-use std::{ptr, slice};
-use crate::xcb_box::XcbBox;
-use std::collections::HashMap;
-use bstr::ByteSlice;
-use thiserror::Error;
-use std::error::Error;
-use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Debug)]
 pub struct XcbError {
+    pub error_code: u8,
     pub sequence: u32,
+    pub major: u8,
+    pub minor: u16,
     pub ty: XcbErrorType,
 }
 
@@ -22,13 +26,65 @@ impl Display for XcbError {
     }
 }
 
-impl Error for XcbError { }
+impl Error for XcbError {}
+
+impl From<XcbErrorType> for XcbError {
+    fn from(e: XcbErrorType) -> Self {
+        Self {
+            error_code: 0,
+            sequence: 0,
+            major: 0,
+            minor: 0,
+            ty: e,
+        }
+    }
+}
+
+#[derive(Clone, Error, Debug)]
+#[non_exhaustive]
+pub enum XcbConnectionError {
+    #[error("An unknown error occurred: {0}")]
+    Unknown(c_int),
+    #[error("An IO error occurred")]
+    Io,
+    #[error("The user tried to send a request with an unsupported extension")]
+    UnsupportedExtension,
+    #[error("Out of memory")]
+    OutOfMemory,
+    #[error("The user tried to send a request that is too large for the X server")]
+    MessageLength,
+    #[error("libxcb was unable to parse the DISPLAY string")]
+    DisplayString,
+    #[error("The requested screen is not available")]
+    InvalidScreen,
+    #[error("An error occurred while handling file descriptors passed to and from the X server")]
+    FileDescriptors,
+}
+
+impl From<c_int> for XcbConnectionError {
+    fn from(e: c_int) -> Self {
+        match e {
+            XCB_CONN_ERROR => XcbConnectionError::Io,
+            XCB_CONN_CLOSED_EXT_NOTSUPPORTED => XcbConnectionError::UnsupportedExtension,
+            XCB_CONN_CLOSED_MEM_INSUFFICIENT => XcbConnectionError::OutOfMemory,
+            XCB_CONN_CLOSED_REQ_LEN_EXCEED => XcbConnectionError::MessageLength,
+            XCB_CONN_CLOSED_PARSE_ERR => XcbConnectionError::DisplayString,
+            XCB_CONN_CLOSED_INVALID_SCREEN => XcbConnectionError::InvalidScreen,
+            XCB_CONN_CLOSED_FDPASSING_FAILED => XcbConnectionError::FileDescriptors,
+            _ => XcbConnectionError::Unknown(e),
+        }
+    }
+}
 
 #[derive(Clone, Error, Debug)]
 #[non_exhaustive]
 pub enum XcbErrorType {
-    #[error("An unknown error occurred: {0:#?}")]
+    #[error("An unknown error occurred: {0:?}")]
     Unknown(xcb_generic_error_t),
+    #[error("The X server did not send a reply to a request")]
+    MissingReply,
+    #[error("The connection was terminated due to an error: {0}")]
+    Connection(XcbConnectionError),
     #[error(transparent)]
     Core(core::CoreError),
     #[error("XVideo extension error: {0}")]
@@ -57,7 +113,9 @@ pub enum XcbErrorType {
     Input(input::InputError),
 }
 
+#[derive(Debug)]
 pub struct XcbErrorParser {
+    pub(crate) c: *mut xcb_connection_t,
     parsers: Vec<ErrorParser>,
 }
 
@@ -76,10 +134,13 @@ unsafe fn check_core_error(err: *mut xcb_generic_error_t) -> Result<(), XcbError
 impl XcbErrorParser {
     pub unsafe fn new(xcb: &Xcb, c: *mut xcb_connection_t) -> Self {
         let mut bases = HashMap::new();
-        {
+        loop {
             let mut err = ptr::null_mut();
             let extensions = xcb.xcb_list_extensions_reply(c, xcb.xcb_list_extensions(c), &mut err);
-            check_core_error(err).expect("Could not list extensions");
+            if let Err(e) = check_core_error(err) {
+                log::error!("Could not list extensions: {}", e);
+                break;
+            }
             let extensions = XcbBox::new(extensions);
             let mut names_iter = xcb.xcb_list_extensions_names_iterator(&*extensions);
             while names_iter.rem > 0 {
@@ -90,24 +151,25 @@ impl XcbErrorParser {
                     xcb.xcb_query_extension(c, len as _, name),
                     &mut err,
                 );
-                check_core_error(err).expect("Could not query extension");
+                if let Err(e) = check_core_error(err) {
+                    log::error!("Could not query extension: {}", e);
+                    continue;
+                }
                 let ext = XcbBox::new(ext);
                 let name = slice::from_raw_parts(name as *const u8, len as _);
                 bases.insert(name, ext.first_error);
                 xcb.xcb_str_next(&mut names_iter);
             }
+            break;
         }
 
-        let mut parsers = vec!();
+        let mut parsers = vec![];
         for config in CONFIGS {
             let min = match config.name {
                 Some(name) => bases.get(name).cloned(),
                 _ => Some(1),
             };
             if let Some(min) = min {
-                if let Some(name) = config.name {
-                    log::debug!("The first error code of extension `{}` is {}.", name.as_bstr(), min);
-                }
                 parsers.push(ErrorParser {
                     min,
                     max_plus_1: min + config.num_errors,
@@ -119,13 +181,10 @@ impl XcbErrorParser {
         for w in parsers.windows(2) {
             assert!(w[0].max_plus_1 <= w[1].min);
         }
-        Self {
-            parsers,
-        }
+        Self { c, parsers }
     }
 
-    pub unsafe fn parse(&self, e: *const xcb_generic_error_t) -> XcbError {
-        let e = &*e;
+    pub unsafe fn parse(&self, e: &xcb_generic_error_t) -> XcbError {
         let ty = 'outer: loop {
             for p in &self.parsers {
                 if p.min <= e.error_code && e.error_code < p.max_plus_1 {
@@ -135,9 +194,67 @@ impl XcbErrorParser {
             break XcbErrorType::Unknown(*e);
         };
         XcbError {
+            error_code: e.error_code,
             sequence: e.full_sequence,
+            major: e.major_code,
+            minor: e.minor_code,
             ty,
         }
+    }
+
+    #[inline]
+    pub unsafe fn check<T>(
+        &self,
+        xcb: &Xcb,
+        t: *mut T,
+        e: *mut xcb_generic_error_t,
+    ) -> Result<XcbBox<T>, XcbError> {
+        if !e.is_null() {
+            let e = XcbBox::new(e);
+            Err(self.parse(&e))
+        } else {
+            self.check_val(xcb, t)
+        }
+    }
+
+    #[inline]
+    pub unsafe fn check_val<T>(&self, xcb: &Xcb, t: *mut T) -> Result<XcbBox<T>, XcbError> {
+        if t.is_null() {
+            self.check_connection(xcb)
+                .and(Err(XcbErrorType::MissingReply.into()))
+        } else {
+            Ok(XcbBox::new(t))
+        }
+    }
+
+    #[inline]
+    pub unsafe fn check_connection(&self, xcb: &Xcb) -> Result<(), XcbError> {
+        let e = xcb.xcb_connection_has_error(self.c);
+        if e == 0 {
+            Ok(())
+        } else {
+            Err(XcbErrorType::Connection(e.into()).into())
+        }
+    }
+
+    #[inline]
+    pub unsafe fn check_err(&self, e: *mut xcb_generic_error_t) -> Result<(), XcbError> {
+        if !e.is_null() {
+            let e = XcbBox::new(e);
+            Err(self.parse(&e))
+        } else {
+            Ok(())
+        }
+    }
+
+    #[inline]
+    pub unsafe fn check_cookie(
+        &self,
+        xcb: &Xcb,
+        cookie: xcb_void_cookie_t,
+    ) -> Result<(), XcbError> {
+        let err = xcb.xcb_request_check(self.c, cookie);
+        self.check_err(err)
     }
 }
 
@@ -145,6 +262,19 @@ struct ErrorParser {
     min: u8,
     max_plus_1: u8,
     config: &'static ErrorConfig,
+}
+
+impl Debug for ErrorParser {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let name = self.config.name.unwrap_or(b"Core");
+        write!(
+            f,
+            "{}([{}, {}])",
+            name.as_bstr(),
+            self.min,
+            self.max_plus_1 - 1
+        )
+    }
 }
 
 struct ErrorConfig {

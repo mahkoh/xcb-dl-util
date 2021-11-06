@@ -35,6 +35,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "byteorder"
+version = "1.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -72,6 +78,12 @@ checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "isnt"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a7558cc96ddcaf0b4144d7149984ace2899bb29d4ee2999979d429efc305200"
 
 [[package]]
 name = "lazy_static"
@@ -161,6 +173,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "smallvec"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ecab6c735a6bb4139c0caafd0cc3635748bbb3acf4550e8138122099251f309"
+
+[[package]]
 name = "syn"
 version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -238,9 +256,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "xcb-dl"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b39230bed97a17e51167fc5de9ea930496187cd695d2a30f91aa4742eb85753"
+checksum = "4ce37e57249f12cbdf43844a3c9b3162f528ec27a1dc1dd7c6f46826063f51e8"
 dependencies = [
  "libc",
  "libloading",
@@ -252,9 +270,12 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "bstr",
+ "byteorder",
+ "isnt",
  "libc",
  "log",
  "simple_logger",
+ "smallvec",
  "thiserror",
  "xcb-dl",
 ]
