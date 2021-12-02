@@ -305,52 +305,6 @@ struct RenderConfig {
     animated: bool,
 }
 
-#[test]
-fn test() {
-    use simple_logger::SimpleLogger;
-    unsafe {
-        SimpleLogger::new().init().unwrap();
-        let xcb = Xcb::load().unwrap();
-        let render = XcbRender::load().unwrap();
-        let c = xcb.xcb_connect(ptr::null(), ptr::null_mut());
-        let ctx = XcbCursorContext::new(&xcb, &render, c);
-        let window_id = xcb.xcb_generate_id(c);
-        xcb.xcb_create_window(
-            c,
-            24,
-            window_id,
-            ctx.root,
-            0,
-            0,
-            100,
-            100,
-            0,
-            0,
-            ctx.visual,
-            0,
-            ptr::null(),
-        );
-        xcb.xcb_map_window(c, window_id);
-        for cursor in ctx.core_map.keys() {
-            let config = XcbLoadCursorConfig {
-                name: cursor.to_str_unchecked(),
-                theme: Some("breeze_cursors"),
-                size: Some(100),
-                ..Default::default()
-            };
-            let res = ctx.load_cursor(&xcb, &render, &config).unwrap();
-            xcb.xcb_change_window_attributes(
-                c,
-                window_id,
-                XCB_CW_CURSOR,
-                &res as *const _ as *const _,
-            );
-            xcb.xcb_flush(c);
-            std::thread::sleep_ms(2000);
-        }
-    }
-}
-
 fn find_cursor_paths() -> Vec<BString> {
     let home = env::var_os(HOME).map(|h| Vec::from_os_string(h).unwrap());
     let cursor_paths = env::var_os(XCURSOR_PATH);

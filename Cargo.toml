@@ -1,8 +1,11 @@
 [package]
 name = "xcb-dl-util"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "X11"
+description = "Utilities for xcb-dl"
+keywords = ["xcb", "window", "xlib", "x11"]
+repository = "https://github.com/mahkoh/xcb-dl-util"
 
 [dependencies]
 xcb-dl = "0.2.0"
@@ -14,9 +17,6 @@ thiserror = "1.0.30"
 byteorder = "1.4.3"
 isnt = "0.1.0"
 smallvec = "1.7.0"
-
-[dev-dependencies]
-simple_logger = "1.13.0"
 
 [features]
 has_symbol = ["xcb-dl/has_symbol"]
